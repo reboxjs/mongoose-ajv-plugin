@@ -5,18 +5,24 @@
 // Comments:   
 // --------------------------------------------------------------------------------
 
-/// <reference path="./typings/node/node.d.ts" />
 
-var semver = require('semver');
-var mongoose = require('mongoose');
-var AJV = require('ajv');
+import semver from 'semver';
+import * as mongoose from 'mongoose';
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
+
 var ValidationError = mongoose.Error.ValidationError;
 var ValidatorError  = mongoose.Error.ValidatorError;
 
-export = function (schema, options) {
+export default function (schema, options) {
 
     // GET THE AJV INSTANCE
-    var ajv = (options && options.ajv) || new AJV();
+    var ajv = (options && options.ajv);
+    if (!ajv) {
+        ajv = new Ajv();
+        console.log('---HEHHE__-')
+        addFormats(ajv);
+    }
     if(options && options.plugins){
         for(let key in options.plugins){
             if(!options.plugins.hasOwnProperty(key))
@@ -69,8 +75,14 @@ export = function (schema, options) {
             error.message += "; ";
             console.log("SCHEMA.errors.length: ",SCHEMA.errors.length)
             error.message += JSON.stringify(SCHEMA.errors.map((x) => `'${x.schemaPath}' ${x.message}`));
-            error.errors.record = new ValidatorError('record', 'Overall object does not match JSON-schema', 'notvalid', data);
-            error.errors.record.errors = SCHEMA.errors;
+            // error.errors.record = new ValidatorError('record', 'Overall object does not match JSON-schema', 'notvalid', data);
+            error.errors.record = new ValidatorError({
+                path: 'record',
+                message: 'Overall object does not match JSON-schema',
+                type: 'notvalid',
+                reason: data,
+            })
+            error.errors = SCHEMA.errors;
             return next(error);
         }
         try{
@@ -87,8 +99,14 @@ export = function (schema, options) {
                     var error = new ValidationError(data);
                     error.message += `; '${key}' attribute does not match it's JSON-schema: `;
                     error.message += JSON.stringify($schema.errors.map((x) => `'${x.schemaPath}' ${x.message}`));
-                    error.errors[key] = new ValidatorError(key, key+' does not match JSON-schema', 'notvalid', data);
-                    error.errors[key].errors = schemata[key].errors;
+                    // error.errors[key] = new ValidatorError(key, key+' does not match JSON-schema', 'notvalid', data);
+                    error.errors.record = new ValidatorError({
+                        path: key,
+                        message: `${key} does not match JSON-schema`,
+                        type: 'notvalid',
+                        reason: data,
+                    })
+                    error.errors[key] = schemata[key].errors;
                     return next(error);
                 }
             }

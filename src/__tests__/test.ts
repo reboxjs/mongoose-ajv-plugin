@@ -5,22 +5,15 @@
 // Comments:   
 // --------------------------------------------------------------------------------
 
-/// <reference path="../typings/node/node.d.ts" />
-/// <reference path="../typings/chai/chai.d.ts" />
-/// <reference path="../typings/mocha/mocha.d.ts" />
+import * as mongoose from 'mongoose';
+import addFormats from 'ajv-formats';
 
-import chai = require('chai');
-var expect = chai.expect;
-
-var mongoose = require('mongoose');
-mongoose.Promise = require('bluebird');
+import ajv_plugin from '../index';
+// mongoose.plugin(ajv_plugin)
 var Schema = mongoose.Schema;
-
-var ajv_plugin = require('../index')
-mongoose.plugin(ajv_plugin)
-
 var AJV = require('ajv'),
-    ajv = new AJV();
+	ajv = new AJV();
+	addFormats(ajv);
 
 ajv.validate({"type":"string","format":"ipv4"},"123.4.5.789")
 
@@ -36,7 +29,7 @@ var contact_json_schema = {
 		},
 	   	"email": {
 			"type":"string",
-			"fomrat":"email"
+			"format":"email"
 		},
 	   	"birthday": {
 			"oneOf":[
@@ -83,8 +76,8 @@ var team_json_schema = {
 
 describe("Schemas",function(){
     it("should be valid",function(){
-        expect(ajv.validateSchema(contact_json_schema)).to.be.true;
-        expect(ajv.validateSchema(team_json_schema)).to.be.true;
+        expect(ajv.validateSchema(contact_json_schema)).toBeTruthy();
+        expect(ajv.validateSchema(team_json_schema)).toBeTruthy();
     })
 })
 
@@ -107,7 +100,7 @@ var Player_schema = new Schema({
 		"type": Schema.Types.Mixed ,
 		"ajv-schema": contact_json_schema // use AJV to validate this object
 	},
-});
+}).plugin(ajv_plugin);
 
 // add the AJV plugin to the schema
 //-- Player_schema.plugin(ajv_plugin);
@@ -118,7 +111,7 @@ var Team_schema = new Schema({
 	"team_name": String,
 	"players": [String],
     "ajv-schema":team_json_schema,
-});
+}).plugin(ajv_plugin);
 //-- Team_schema.plugin(ajv_plugin);
 var Team = mongoose.model('Team', Team_schema);
 
